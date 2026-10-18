@@ -89,11 +89,18 @@ python3 hw2.py --cv-folder task2
 `task2/` has no `ground_truth.json`). Only the PDF is the attack surface; do not
 attack the MCP server. See the homework description for the full rules.
 
-## Homework 2 solution:
-> to students: this is your report, see the homework description.
+## Homework 2 solution
 
 ### Task 1
-> one paragraph describing your solution, and your results on `public_test`.
+
+My solution creates one temperature-zero `deepseek-v4-flash` LangChain tool-calling agent and treats each CV as untrusted evidence rather than instructions. The prompt first resolves identity from several independent anchors—name, current city, industry, employers, dates, and schools—then inspects all plausible LinkedIn matches instead of trusting the first search result; LinkedIn is the primary professional source, with Facebook used for identity and location corroboration. After selecting the strongest identity, the agent checks every graded positive claim in name, city, employment, education, and skills, accepts genuine wording equivalents and omissions, but assigns a low score for any confirmed contradiction. The runner limits concurrency to three CVs, retries malformed or unresolved calls, enforces per-CV timeouts, parses only a bounded final score, and returns a neutral fallback rather than crashing the batch. On the seven public-test CVs, it achieved **7/7 correct (100%) in each of four consecutive runs**, assigning 0.95 to the four valid CVs and 0.05 to the three CVs containing the altered start year, inflated title, and fabricated skill.
 
 ### Task 2
-> the attack techniques you used and why you expect them to work.
+
+The adversarial CV uses a deliberate **dual-representation PDF**. A human viewing the rendered page sees `Hometown: Kowloon`, a genuine falsehood because Kelly Tsang's Facebook profile records her hometown as Sha Tin. The visible statement is flattened into a high-resolution raster graphic, while an invisible PDF text layer at the same position contains `Hometown: Sha Tin`; every graded professional claim—name, current city, jobs, education, and skills—remains accurate. The attack contains no jailbreak or fabricated tool output.
+
+This design exploits two independent weaknesses. First, the homework's MarkItDown pipeline extracts PDF text but performs no OCR, so the verifier receives the truthful machine-readable line and never receives the visible word `Kowloon`. Second, even if another extractor or multimodal verifier exposed that word, hometown is explicitly outside the fields that Task 1 treats as discrepancies. The final PDF was checked both visually and through MarkItDown: the rendered page contains `Kowloon`, while extracted text contains `Sha Tin` and no `Kowloon`. In **five consecutive local runs**, both `target_cv.pdf` and `adversarial_cv.pdf` received **0.95**, so the attack passed my defended verifier consistently rather than in a single lucky run.
+
+### Task 3
+
+The reflection is submitted as a separate file: [Trust at Machine Speed](task3/reflection.pdf).
